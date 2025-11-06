@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Calendar, ClipboardCheck } from 'lucide-react';
+import { Plus, Trash2, Calendar, ClipboardCheck, Truck, IdCard, Hash } from 'lucide-react';
 
 const emptyItem = { name: '', qty: 1, notes: '' };
 
@@ -9,6 +9,9 @@ const PermitForm = ({ onSubmit, section }) => {
   const [destination, setDestination] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
+  const [driverName, setDriverName] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
+  const [carrierName, setCarrierName] = useState('');
 
   const addItem = () => setItems((prev) => [...prev, { ...emptyItem }]);
   const removeItem = (idx) => setItems((prev) => prev.filter((_, i) => i !== idx));
@@ -17,13 +20,17 @@ const PermitForm = ({ onSubmit, section }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!purpose || !destination || !start || !end || items.some((it) => !it.name || it.qty <= 0)) return;
-    onSubmit({ items, purpose, destination, period: { start, end }, section });
+    if (!driverName || !vehicleNumber || !carrierName) return;
+    onSubmit({ items, purpose, destination, period: { start, end }, section, driverName, vehicleNumber, carrierName });
     // reset
     setItems([{ ...emptyItem }]);
     setPurpose('');
     setDestination('');
     setStart('');
     setEnd('');
+    setDriverName('');
+    setVehicleNumber('');
+    setCarrierName('');
   };
 
   return (
@@ -57,9 +64,9 @@ const PermitForm = ({ onSubmit, section }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm mb-1 flex items-center gap-2"><Calendar size={16}/> Tanggal & Waktu Mulai</label>
+            <label className="block text-sm mb-1 flex items-center gap-2"><Calendar size={16}/> Mulai</label>
             <input
               type="datetime-local"
               className="w-full border rounded-md px-3 py-2 text-sm"
@@ -68,12 +75,42 @@ const PermitForm = ({ onSubmit, section }) => {
             />
           </div>
           <div>
-            <label className="block text-sm mb-1 flex items-center gap-2"><Calendar size={16}/> Tanggal & Waktu Selesai</label>
+            <label className="block text-sm mb-1 flex items-center gap-2"><Calendar size={16}/> Selesai</label>
             <input
               type="datetime-local"
               className="w-full border rounded-md px-3 py-2 text-sm"
               value={end}
               onChange={(e) => setEnd(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-1 flex items-center gap-2"><Truck size={16}/> Nama Driver</label>
+            <input
+              className="w-full border rounded-md px-3 py-2 text-sm"
+              value={driverName}
+              onChange={(e) => setDriverName(e.target.value)}
+              placeholder="Nama driver/driver perusahaan"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm mb-1 flex items-center gap-2"><Hash size={16}/> Nomor Sarana</label>
+            <input
+              className="w-full border rounded-md px-3 py-2 text-sm"
+              value={vehicleNumber}
+              onChange={(e) => setVehicleNumber(e.target.value)}
+              placeholder="Plat nomor / ID kendaraan"
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-1 flex items-center gap-2"><IdCard size={16}/> Nama Pembawa Barang</label>
+            <input
+              className="w-full border rounded-md px-3 py-2 text-sm"
+              value={carrierName}
+              onChange={(e) => setCarrierName(e.target.value)}
+              placeholder="Nama petugas yang membawa"
             />
           </div>
         </div>

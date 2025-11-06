@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { BadgeCheck, CheckCircle2, FileText, Printer, ScanLine, Search, XCircle } from 'lucide-react';
+import { BadgeCheck, CheckCircle2, FileText, Printer, ScanLine, XCircle } from 'lucide-react';
 
 const StatusPill = ({ status }) => {
   const map = {
@@ -7,17 +7,20 @@ const StatusPill = ({ status }) => {
     approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     rejected: 'bg-rose-50 text-rose-700 border-rose-200',
     released: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    not_released: 'bg-gray-50 text-gray-700 border-gray-200',
   };
   const text = {
     pending: 'Menunggu',
     approved: 'Disetujui',
     rejected: 'Ditolak',
     released: 'Released',
+    not_released: 'Tidak Sesuai',
   }[status];
   return <span className={`text-xs px-2 py-1 rounded-full border ${map[status]}`}>{text}</span>;
 };
 
-const PermitCard = ({ permit, onPrint, onApprove, onReject }) => {
+const PermitCard = ({ permit, onPrint, onApprove, onReject, showNoteInput, onSecurityAction, location }) => {
+  const [note, setNote] = useState('');
   return (
     <div className="border rounded-lg p-4 bg-white/70 backdrop-blur">
       <div className="flex items-start justify-between">
@@ -27,6 +30,7 @@ const PermitCard = ({ permit, onPrint, onApprove, onReject }) => {
         </div>
         <StatusPill status={permit.status} />
       </div>
+
       <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
         <div>
           <div className="text-gray-500">Pemohon</div>
@@ -41,6 +45,22 @@ const PermitCard = ({ permit, onPrint, onApprove, onReject }) => {
           <div className="font-medium">{new Date(permit.period.start).toLocaleString()} — {new Date(permit.period.end).toLocaleString()}</div>
         </div>
       </div>
+
+      <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+        <div>
+          <div className="text-gray-500">Nama Driver</div>
+          <div className="font-medium">{permit.driverName}</div>
+        </div>
+        <div>
+          <div className="text-gray-500">Nomor Sarana</div>
+          <div className="font-medium">{permit.vehicleNumber}</div>
+        </div>
+        <div>
+          <div className="text-gray-500">Pembawa Barang</div>
+          <div className="font-medium">{permit.carrierName}</div>
+        </div>
+      </div>
+
       <div className="mt-3">
         <div className="text-gray-500 text-sm mb-1">Barang</div>
         <ul className="list-disc pl-5 text-sm">
@@ -49,15 +69,38 @@ const PermitCard = ({ permit, onPrint, onApprove, onReject }) => {
           ))}
         </ul>
       </div>
-      <div className="mt-4 flex flex-wrap gap-2">
+
+      {permit.approvedBy && (
+        <div className="mt-3 text-xs text-gray-500">
+          Disetujui/Ditolak oleh: <span className="font-medium text-gray-700">{permit.approvedBy}</span>{permit.supervisorNote ? ` • Catatan: ${permit.supervisorNote}` : ''}
+        </div>
+      )}
+
+      {permit.releasedBy && (
+        <div className="mt-2 text-xs text-gray-500">
+          Diverifikasi oleh Security: <span className="font-medium text-gray-700">{permit.releasedBy}</span> @ <span className="font-medium">{permit.releaseLocation}</span>{permit.securityNote ? ` • Catatan: ${permit.securityNote}` : ''}
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2 items-start">
         {onPrint && (
           <button onClick={() => onPrint(permit)} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border hover:bg-gray-50"><Printer size={16}/> Cetak</button>
         )}
         {onApprove && permit.status === 'pending' && (
-          <button onClick={() => onApprove(permit)} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border text-emerald-700 hover:bg-emerald-50"><CheckCircle2 size={16}/> Setujui</button>
+          <>
+            {showNoteInput && (
+              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Catatan persetujuan/penolakan" className="border rounded-md px-3 py-1.5 text-sm flex-1 min-w-[180px]" />
+            )}
+            <button onClick={() => onApprove(permit, note)} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border text-emerald-700 hover:bg-emerald-50"><CheckCircle2 size={16}/> Setujui</button>
+            <button onClick={() => onReject(permit, note)} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border text-rose-700 hover:bg-rose-50"><XCircle size={16}/> Tolak</button>
+          </>
         )}
-        {onReject && permit.status === 'pending' && (
-          <button onClick={() => onReject(permit)} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border text-rose-700 hover:bg-rose-50"><XCircle size={16}/> Tolak</button>
+        {onSecurityAction && permit.status === 'approved' && (
+          <>
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Catatan verifikasi (opsional)" className="border rounded-md px-3 py-1.5 text-sm flex-1 min-w-[180px]" />
+            <button onClick={() => onSecurityAction(permit, location, note, true)} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border text-indigo-700 hover:bg-indigo-50">Released</button>
+            <button onClick={() => onSecurityAction(permit, location, note, false)} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border text-gray-700 hover:bg-gray-50">Tidak Sesuai</button>
+          </>
         )}
       </div>
     </div>
@@ -87,6 +130,9 @@ const PrintSheet = ({ permit, onClose }) => {
             <div><span className="text-gray-500">Keperluan:</span> <span className="font-medium">{permit.purpose}</span></div>
             <div><span className="text-gray-500">Tujuan:</span> <span className="font-medium">{permit.destination}</span></div>
             <div><span className="text-gray-500">Periode:</span> <span className="font-medium">{new Date(permit.period.start).toLocaleString()} — {new Date(permit.period.end).toLocaleString()}</span></div>
+            <div><span className="text-gray-500">Nama Driver:</span> <span className="font-medium">{permit.driverName}</span></div>
+            <div><span className="text-gray-500">Nomor Sarana:</span> <span className="font-medium">{permit.vehicleNumber}</span></div>
+            <div><span className="text-gray-500">Pembawa Barang:</span> <span className="font-medium">{permit.carrierName}</span></div>
             <div>
               <div className="text-gray-500">Barang:</div>
               <ul className="list-disc pl-5">
@@ -114,26 +160,24 @@ const ManagementBoard = ({
   onReject,
   onPrint,
   onRelease,
+  onHold,
   loginHistory,
   onAddUser,
   onRemoveUser,
 }) => {
-  const [note, setNote] = useState('');
-  const [scanCode, setScanCode] = useState('');
   const [location, setLocation] = useState('Gate A');
   const [printPreview, setPrintPreview] = useState(null);
 
   const myPermits = useMemo(() => permits.filter(p => p.createdBy === user.username), [permits, user.username]);
   const pendingInSection = useMemo(() => permits.filter(p => p.section === user.section && p.status === 'pending'), [permits, user.section]);
-  const codeLookup = useMemo(() => Object.fromEntries(permits.map(p => [p.code, p])), [permits]);
-  const [foundPermit, setFoundPermit] = useState(null);
+  const approvedAll = useMemo(() => permits.filter(p => p.status === 'approved'), [permits]);
 
-  const handleApprove = (p) => onApprove(p, note);
-  const handleReject = (p) => onReject(p, note);
-
-  const handleScan = () => {
-    const p = codeLookup[scanCode.trim()];
-    setFoundPermit(p || null);
+  const securityAction = (permit, loc, note, isReleased) => {
+    if (isReleased) {
+      onRelease(permit, loc, note);
+    } else {
+      onHold(permit, loc, note);
+    }
   };
 
   return (
@@ -190,12 +234,9 @@ const ManagementBoard = ({
       {user.role === 'Pengawas' && (
         <div className="space-y-3">
           <h3 className="font-semibold">Persetujuan Menunggu • Section {user.section}</h3>
-          <div className="flex items-center gap-2">
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Catatan persetujuan/penolakan" className="border rounded-md px-3 py-2 text-sm w-full" />
-          </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {pendingInSection.map((p) => (
-              <PermitCard key={p.id} permit={p} onApprove={handleApprove} onReject={handleReject} />
+              <PermitCard key={p.id} permit={p} onApprove={onApprove} onReject={onReject} showNoteInput />
             ))}
             {pendingInSection.length === 0 && (
               <div className="text-sm text-gray-500">Tidak ada pengajuan menunggu.</div>
@@ -206,52 +247,23 @@ const ManagementBoard = ({
 
       {user.role === 'Security' && (
         <div className="space-y-4">
-          <h3 className="font-semibold flex items-center gap-2"><ScanLine/> Verifikasi Security</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-            <div className="md:col-span-2">
-              <label className="block text-sm mb-1">Tempel/Scan Kode</label>
-              <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
-                <Search size={16} className="text-gray-400"/>
-                <input value={scanCode} onChange={(e) => setScanCode(e.target.value)} className="w-full outline-none text-sm" placeholder="Contoh: PERM-..." />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <select value={location} onChange={(e) => setLocation(e.target.value)} className="border rounded-md px-3 py-2 text-sm">
-                <option>Gate A</option>
-                <option>Gate B</option>
-                <option>Warehouse</option>
-              </select>
-              <button onClick={handleScan} className="px-3 py-2 rounded-md border text-sm hover:bg-gray-50">Cari</button>
-            </div>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold flex items-center gap-2"><ScanLine/> Verifikasi Security</h3>
+            <select value={location} onChange={(e) => setLocation(e.target.value)} className="border rounded-md px-3 py-2 text-sm">
+              <option>Gate A</option>
+              <option>Gate B</option>
+              <option>Warehouse</option>
+            </select>
           </div>
-
-          {foundPermit && (
-            <div className="border rounded-lg p-4 bg-white/70 backdrop-blur">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-gray-500">Kode</div>
-                  <div className="font-mono text-sm">{foundPermit.code}</div>
-                </div>
-                <StatusPill status={foundPermit.status} />
-              </div>
-              <div className="mt-2 text-sm">
-                <div><span className="text-gray-500">Pemohon:</span> <span className="font-medium">{foundPermit.createdBy} • {foundPermit.section}</span></div>
-                <div><span className="text-gray-500">Periode:</span> <span className="font-medium">{new Date(foundPermit.period.start).toLocaleString()} — {new Date(foundPermit.period.end).toLocaleString()}</span></div>
-                <div className="mt-2">
-                  <div className="text-gray-500">Barang:</div>
-                  <ul className="list-disc pl-5">
-                    {foundPermit.items.map((it, i) => (
-                      <li key={i}>{it.name} × {it.qty} {it.notes ? <span className="text-gray-500">({it.notes})</span> : null}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
-                <input className="border rounded-md px-3 py-2 text-sm md:col-span-2" placeholder="Catatan barang tidak sesuai (opsional)" value={note} onChange={(e) => setNote(e.target.value)} />
-                <button onClick={() => onRelease(foundPermit, location, note)} className="px-3 py-2 rounded-md border text-sm text-indigo-700 hover:bg-indigo-50">Tandai Released</button>
-              </div>
-            </div>
-          )}
+          <p className="text-sm text-gray-500">Menampilkan semua pengajuan yang telah disetujui pengawas. Pilih Released atau Tidak Sesuai dan tambahkan catatan jika diperlukan.</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {approvedAll.map((p) => (
+              <PermitCard key={p.id} permit={p} onSecurityAction={securityAction} location={location} />
+            ))}
+            {approvedAll.length === 0 && (
+              <div className="text-sm text-gray-500">Belum ada pengajuan yang disetujui.</div>
+            )}
+          </div>
         </div>
       )}
 
